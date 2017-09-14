@@ -5,7 +5,7 @@
 
 module dfmt.main;
 
-private enum VERSION = "0.5.0";
+private enum VERSION = "0.5.0 modified by Mojo";
 
 version (NoMain)
 {
@@ -57,6 +57,12 @@ else
             case "compact_labeled_statements":
                 optConfig.dfmt_compact_labeled_statements = optVal;
                 break;
+            case "single_line_statements":
+                optConfig.dfmt_single_line_statements = optVal;
+                break;
+            case "keep_assignment_operator_aligment":
+                optConfig.dfmt_keep_assignment_operator_aligment = optVal;
+                break;
             default:
                 assert(false, "Invalid command-line switch");
             }
@@ -83,7 +89,10 @@ else
                 "split_operator_at_line_end", &handleBooleans,
                 "compact_labeled_statements", &handleBooleans,
                 "tab_width", &optConfig.tab_width,
-                "template_constraint_style", &optConfig.dfmt_template_constraint_style);
+                "template_constraint_style", &optConfig.dfmt_template_constraint_style,
+                "single_line_statements", &handleBooleans,
+                "keep_assignment_operator_aligment", &handleBooleans
+                );
             // dfmt on
         }
         catch (GetOptException e)
@@ -114,6 +123,7 @@ else
             // See Phobos' stdio.File.rawWrite
             {
                 import std.stdio : _O_BINARY;
+
                 immutable fd = output.fileno;
                 _setmode(fd, _O_BINARY);
                 version (CRuntime_DigitalMars)
@@ -275,6 +285,8 @@ Formatting Options:
     --split_operator_at_line_end
     --compact_labeled_statements
     --template_constraint_style
+    --single_line_statements
+    --keep_assignment_operator_aligment
         `,
             optionsToString!(typeof(Config.dfmt_template_constraint_style))());
 }

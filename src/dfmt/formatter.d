@@ -157,9 +157,11 @@ private:
 
     void formatStep()
     {
+
         import std.range : assumeSorted;
 
         assert(index < tokens.length);
+
         if (currentIs(tok!"comment"))
         {
             formatComment();
@@ -173,7 +175,9 @@ private:
                 immutable t = tokens[index].type;
                 if (t == tok!"identifier" || isStringLiteral(t)
                         || isNumberLiteral(t) || t == tok!"characterLiteral")
+                {
                     write(" ");
+                }
             }
         }
         else if (currentIs(tok!"module") || currentIs(tok!"import"))
@@ -214,10 +218,12 @@ private:
         else if ((isBlockHeader() || currentIs(tok!"version")
                 || currentIs(tok!"debug")) && peekIs(tok!"(", false))
         {
+
             if (!assumeSorted(astInformation.constraintLocations).equalRange(current.index).empty)
                 formatConstraint();
             else
                 formatBlockHeader();
+
         }
         else if (currentIs(tok!"do"))
         {
@@ -255,8 +261,11 @@ private:
         else if (isBasicType(current.type))
         {
             writeToken();
+
             if (currentIs(tok!"identifier") || isKeyword(current.type) || inAsm)
+            {
                 write(" ");
+            }
         }
         else if (isOperator(current.type))
         {
@@ -264,14 +273,32 @@ private:
         }
         else if (currentIs(tok!"identifier"))
         {
-            writeToken();
-            if (index < tokens.length && (currentIs(tok!"identifier")
-                    || isBasicType(current.type) || currentIs(tok!"@") || currentIs(tok!"if")
-                    || isNumberLiteral(tokens[index].type) || (inAsm
-                    && peekBack2Is(tok!";") && currentIs(tok!"["))))
+
+            if (config.dfmt_keep_assignment_operator_aligment && peekIs(tok!"="))
             {
+                skipTo(tok!"=");
+                writeToken();
                 write(" ");
             }
+            else
+            {
+                writeToken();
+                if (index < tokens.length && (currentIs(tok!"identifier")
+                        || isBasicType(current.type) || currentIs(tok!"@") || currentIs(tok!"if")
+                        || isNumberLiteral(tokens[index].type) || (inAsm
+                        && peekBack2Is(tok!";") && currentIs(tok!"["))))
+                {
+                    write(" ");
+                }
+            }
+
+            /*
+            if (config.dfmt_keep_assignment_operator_aligment && peekIs(tok!"=")) {
+                skipTo(tok!"=");
+                writeToken();
+                write(" ");
+            }*/
+
         }
         else if (currentIs(tok!"scriptLine"))
         {
@@ -345,6 +372,22 @@ private:
                 continue;
             immutable string commentText = commentText(i);
             if (commentText == "dfmt on")
+                break;
+        }
+        write(cast(string) rawSource[tokens[dfmtOff].index .. tokens[dfmtOn].index]);
+        index = dfmtOn;
+    }
+
+    void skipTo(IdType type)
+    {
+        size_t dfmtOff = index;
+        size_t dfmtOn = index;
+        foreach (i; dfmtOff + 1 .. tokens.length)
+        {
+            dfmtOn = i;
+            if (tokens[i].type == tok!"comment")
+                continue;
+            if (tokens[i].type == type)
                 break;
         }
         write(cast(string) rawSource[tokens[dfmtOff].index .. tokens[dfmtOn].index]);
@@ -608,6 +651,7 @@ private:
                 || peekBack2Is(tok!":", true)) && !(isBlockHeader(1) && !peekIs(tok!"if")))
         {
             writeToken();
+
             if (!currentIs(tok!"{"))
                 newline();
         }
@@ -868,7 +912,16 @@ private:
         }
         else if (!currentIs(tok!"{") && !currentIs(tok!";")
                 && !currentIs(tok!"in") && !currentIs(tok!"out") && !currentIs(tok!"body"))
-            newline();
+        {
+            if (config.dfmt_single_line_statements)
+            {
+                write(" ");
+            }
+            else
+            {
+                newline();
+            }
+        }
         else if (currentIs(tok!"{") && indents.topAre(tok!"static", tok!"if"))
         {
             // Hacks to format braced vs non-braced static if declarations.
@@ -881,6 +934,7 @@ private:
 
     void formatElse()
     {
+
         writeToken();
         if (currentIs(tok!"if") || currentIs(tok!"version")
                 || (currentIs(tok!"static") && peekIs(tok!"if")))
@@ -899,7 +953,15 @@ private:
             if (indents.topIsOneOf(tok!"if", tok!"version"))
                 indents.pop();
             indents.push(tok!"else");
-            newline();
+            //newline();
+            if (config.dfmt_single_line_statements)
+            {
+                write(" ");
+            }
+            else
+            {
+                newline();
+            }
         }
         else if (currentIs(tok!"{") && indents.topAre(tok!"static", tok!"if"))
         {
@@ -1407,8 +1469,8 @@ private:
 
     void writeToken()
     {
-        import std.range:retro;
-        import std.algorithm.searching:countUntil;
+        import std.range : retro;
+        import std.algorithm.searching : countUntil;
 
         if (current.text is null)
         {
