@@ -930,6 +930,14 @@ private:
             indents.push(tok!"if");
             formatLeftBrace();
         }
+        else if (currentIs(tok!"{") && indents.topAre(tok!"static", tok!"foreach"))
+        {
+            // The hack for static if seems to work also for static foreach.
+            indents.pop();
+            indents.pop();
+            indents.push(tok!"if");
+            formatLeftBrace();
+        }
     }
 
     void formatElse()
