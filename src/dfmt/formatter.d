@@ -291,7 +291,21 @@ private:
 
             if (config.dfmt_keep_assignment_operator_aligment && peekIs(tok!"="))
             {
-                skipTo(tok!"=");
+                auto tokenEndIdx = current.index + current.text.length;
+                writeToken();
+
+                auto spacesStr = cast(string) rawSource[tokenEndIdx .. current.index];
+
+                // Fixe empty and toally broken assigments (newline)
+                import std.string;
+                if (spacesStr.length && spacesStr.indexOf('\n') < 0) {
+                    write(spacesStr);
+                }
+                else {
+                    write(" ");
+                }
+
+                // Write '= '
                 writeToken();
                 write(" ");
             }
@@ -306,13 +320,6 @@ private:
                     write(" ");
                 }
             }
-
-            /*
-            if (config.dfmt_keep_assignment_operator_aligment && peekIs(tok!"=")) {
-                skipTo(tok!"=");
-                writeToken();
-                write(" ");
-            }*/
 
         }
         else if (currentIs(tok!"scriptLine"))
@@ -387,22 +394,6 @@ private:
                 continue;
             immutable string commentText = commentText(i);
             if (commentText == "dfmt on")
-                break;
-        }
-        write(cast(string) rawSource[tokens[dfmtOff].index .. tokens[dfmtOn].index]);
-        index = dfmtOn;
-    }
-
-    void skipTo(IdType type)
-    {
-        size_t dfmtOff = index;
-        size_t dfmtOn = index;
-        foreach (i; dfmtOff + 1 .. tokens.length)
-        {
-            dfmtOn = i;
-            if (tokens[i].type == tok!"comment")
-                continue;
-            if (tokens[i].type == type)
                 break;
         }
         write(cast(string) rawSource[tokens[dfmtOff].index .. tokens[dfmtOn].index]);
